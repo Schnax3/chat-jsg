@@ -340,7 +340,7 @@ button{cursor:pointer;font-family:inherit;font-weight:600;transition:all .2s;bor
 .adm-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* ══════════════════════════════════════
-   MOBILE – Full app redesign
+   MOBILE
    ══════════════════════════════════════ */
 @media(max-width:680px){
   body{padding:0;align-items:flex-start;background-image:none}
@@ -407,7 +407,6 @@ button{cursor:pointer;font-family:inherit;font-weight:600;transition:all .2s;bor
 <body>
 <div class="app">
 
-<!-- Toast notification -->
 <div id="admToast" class="adm-toast"></div>
 
 <!-- AUTH -->
@@ -430,7 +429,6 @@ button{cursor:pointer;font-family:inherit;font-weight:600;transition:all .2s;bor
 
   <div id="drawerBackdrop"></div>
 
-  <!-- Mobile top bar -->
   <div id="mobileTopBar">
     <button id="mobileMenuBtn">☰</button>
     <div id="mobileTopTitle">ChatPro</div>
@@ -561,7 +559,6 @@ button{cursor:pointer;font-family:inherit;font-weight:600;transition:all .2s;bor
 
   </div><!-- /mobileContent -->
 
-  <!-- Bottom nav (mobile only) -->
   <nav id="mobileBottomNav">
     <button class="mob-nav-btn active" data-mobnav="rooms">
       <span>💬</span><span>Räume</span>
@@ -754,7 +751,6 @@ button{cursor:pointer;font-family:inherit;font-weight:600;transition:all .2s;bor
       </div>
       <!-- ADMIN -->
       <div class="stab-content" id="stab-admin">
-        <!-- Admin sub-tabs -->
         <div class="stab-btns" id="adminSubTabBtns">
           <button class="stab-btn active" data-astab="ausers">👥 Nutzer</button>
           <button class="stab-btn" data-astab="areports">🚨 Reports</button>
@@ -827,18 +823,15 @@ button{cursor:pointer;font-family:inherit;font-weight:600;transition:all .2s;bor
 </div>
 
 <style>
-/* Image viewer (outside of scoped media — needed globally) */
 #imgViewer{position:fixed;inset:0;background:rgba(0,0,0,.96);display:none;align-items:center;justify-content:center;z-index:200}
 #imgViewer.show{display:flex}
 #imgViewer img{max-width:90vw;max-height:90vh;border-radius:10px}
 #imgViewer button{position:absolute;top:16px;right:20px;background:rgba(255,255,255,.1);color:#fff;font-size:24px;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center}
 #imgViewer button:hover{background:rgba(255,255,255,.2)}
-/* Pinned modal scroll */
 .pinned-msg-item{background:var(--surface2);border:1px solid rgba(234,179,8,.2);border-radius:8px;padding:9px 11px;margin-bottom:6px}
 .pinned-msg-item-name{font-size:11px;font-weight:700;color:var(--yellow);margin-bottom:3px;font-family:'JetBrains Mono',monospace}
 .pinned-msg-item-text{font-size:13px;color:var(--text2)}
 .role-chip{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer}
-/* Admin sub-tab content */
 .astab-content{display:none}
 .astab-content.active{display:block}
 </style>
@@ -865,11 +858,15 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
+// ══════════════════════════════════════════════════════
+// ADMIN CONFIG – Admin-E-Mail muss mit Firebase Rules übereinstimmen
+// ══════════════════════════════════════════════════════
 const OWNER_EMAIL  = "admin@admin.admin";
 const ADMIN_EMAILS = ["jan@Anonym.com","flo@st.com"];
 const ADMIN_UIDS   = ["o6gwOdIwiiSItJ3wIvQFVZa7xuh2"];
-function isOwnerEmail(e){ return e===OWNER_EMAIL; }
-function isGA(email,uid){ return email===OWNER_EMAIL||ADMIN_EMAILS.includes(email)||ADMIN_UIDS.includes(uid); }
+
+function isOwnerEmail(e){ return e === OWNER_EMAIL; }
+function isGA(email, uid){ return email === OWNER_EMAIL || ADMIN_EMAILS.includes(email) || ADMIN_UIDS.includes(uid); }
 
 const LEVELS=[
   {name:"Neuling",min:0,max:50,rank:"⚪"},
@@ -895,7 +892,6 @@ function getLevel(xp=0){ return LEVELS.find(l=>xp>=l.min&&xp<l.max)||LEVELS.at(-
 function xpPct(xp=0){ const l=getLevel(xp); return Math.round((xp-l.min)/(l.max-l.min)*100); }
 function hexToRgb(hex){ const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16); return `${r},${g},${b}`; }
 
-// Toast (FIX: previously referenced non-existent element)
 let _toastTimer;
 function admToast(msg, type="ok"){
   const el=$("admToast"); if(!el)return;
@@ -921,7 +917,7 @@ let idleTimer=null;
 let currentStatus="online";
 let reactionTargetKey=null;
 let searchMode=false;
-let mobileIsBack=false; // FIX: track mobile back state separately
+let mobileIsBack=false;
 
 // ─── AUTH ───
 $("btnLogin").onclick=async()=>{
@@ -974,7 +970,12 @@ onAuthStateChanged(auth, async user=>{
   $("pushToggle").classList.toggle("on",pushEnabled);
   if(udata.avatar) setAvatarEl($("userAvatar"),udata.avatar,udata.name||"?");
   blockedUsers=udata.blocked||{};
-  if(isOwnerEmail(user.email)) $("adminStabBtn").style.display="";
+
+  // ══════════════════════════════════════════════════════
+  // FIX: Admin-Tab für ALLE Admins anzeigen (nicht nur Owner)
+  // Übereinstimmend mit Firebase Rules: auth.token.email === 'admin@admin.admin'
+  // ══════════════════════════════════════════════════════
+  if(isGA(user.email, user.uid)) $("adminStabBtn").style.display="";
 
   const presRef=ref(db,"users/"+user.uid+"/online");
   await set(presRef,true);
@@ -989,7 +990,6 @@ onAuthStateChanged(auth, async user=>{
   loadDMs();
   loadFavRooms();
   loadBlockedList();
-  // FIX: init mobile UI AFTER auth (so currentUser exists)
   initMobileUI();
 });
 
@@ -1034,35 +1034,31 @@ function setStatusDisplay(s){
   if(dot) dot.className="status-dot dot-"+s;
 }
 
-// ─── SIDEBAR NAV (desktop) ───
+// ─── SIDEBAR NAV ───
 document.querySelectorAll(".snav-btn").forEach(btn=>{
   btn.onclick=()=>{
     document.querySelectorAll(".snav-btn").forEach(b=>b.classList.remove("active"));
     document.querySelectorAll(".sidebar-panel").forEach(p=>p.classList.remove("active"));
     btn.classList.add("active");
     $("panel-"+btn.dataset.nav).classList.add("active");
-    // Sync bottom nav
     document.querySelectorAll(".mob-nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.mobnav===btn.dataset.nav));
   };
 });
 
-// ─── SETTINGS TABS (FIX: unified handler for all stab-btn groups) ───
-// Settings main tabs
+// ─── SETTINGS TABS ───
 document.querySelectorAll("#settingsTabBtns .stab-btn").forEach(btn=>{
   btn.onclick=()=>{
     document.querySelectorAll("#settingsTabBtns .stab-btn").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
     const t=btn.dataset.stab;
-    // Show only matching stab-content that is a direct child of modal-scroll
     document.querySelectorAll("#settingsModal .modal-scroll > .stab-content").forEach(c=>{
       c.classList.toggle("active", c.id==="stab-"+t);
     });
-    // When admin tab opened, auto-load users
     if(t==="admin") admLoadUsers();
   };
 });
 
-// FIX: Admin sub-tabs with proper switching logic
+// ─── ADMIN SUB-TABS ───
 document.querySelectorAll("#adminSubTabBtns .stab-btn").forEach(btn=>{
   btn.onclick=()=>{
     document.querySelectorAll("#adminSubTabBtns .stab-btn").forEach(b=>b.classList.remove("active"));
@@ -1237,10 +1233,7 @@ async function enterRoom(id,roomOrDm,type){
   });
 
   msgDiv.scrollTop=msgDiv.scrollHeight;
-
-  // FIX: update mobile UI after room is entered
   updateMobileForRoom(name, emoji);
-  // FIX: close drawer only after room is set up
   closeMobileDrawer();
 }
 
@@ -1429,7 +1422,6 @@ function parseMarkdown(text){
   return h;
 }
 
-// FIX: expose profile functions as window properties for onclick in innerHTML
 window._showProfileByName=async(name)=>{
   const users=await get(ref(db,"users")); if(!users.exists())return;
   const entry=Object.entries(users.val()).find(([,u])=>u.name?.toLowerCase()===name.toLowerCase());
@@ -1509,14 +1501,10 @@ function appendMessage(key,d,isMod,prepend=false){
 
 function prependMessage(k,d,isMod){ appendMessage(k,d,isMod,true); }
 
-// FIX: all window-exposed functions use _prefix to avoid collision
 window._startReply=(key,name,text)=>{ replyTo={key,name,text}; $("replyName").textContent=name; $("replyText").textContent=(text||"").substring(0,50); $("replyStrip").style.display="flex"; $("msgInput").focus(); };
-// Keep old names for backward compat
-window.startReply=window._startReply;
 $("cancelReply").onclick=()=>{ replyTo=null; $("replyStrip").style.display="none"; };
 
 window._scrollToMsg=(key)=>{ const el=document.getElementById("msg-"+key); if(el){ el.scrollIntoView({behavior:"smooth",block:"center"}); el.style.background="rgba(91,106,240,.18)"; setTimeout(()=>el.style.background="",1600); } };
-window.scrollToMsg=window._scrollToMsg;
 
 window._editMsg=async(key,cur)=>{
   const snap=await get(ref(db,`rooms/${currentRoomId}/messages/${key}`));
@@ -1525,13 +1513,10 @@ window._editMsg=async(key,cur)=>{
   const nw=prompt("Nachricht bearbeiten:",cur); if(!nw||nw.trim()===cur)return;
   await update(ref(db,`rooms/${currentRoomId}/messages/${key}`),{text:nw.trim(),edited:true,editedAt:Date.now()});
 };
-window.editMsg=window._editMsg;
 
 window._delMsg=async(key)=>{ if(!confirm("Löschen?"))return; const path=currentRoomType==="dm"?`dms/${currentRoomId}/messages`:`rooms/${currentRoomId}/messages`; await remove(ref(db,`${path}/${key}`)); };
-window.delMsg=window._delMsg;
 
 window._togglePin=async(key,isPinned)=>{ await update(ref(db,`rooms/${currentRoomId}/messages/${key}`),{pinned:!isPinned}); loadPinnedBar(currentRoomId); };
-window.togglePin=window._togglePin;
 
 // ─── REACTIONS ───
 window._toggleReaction=async(msgKey,emoji)=>{
@@ -1539,11 +1524,9 @@ window._toggleReaction=async(msgKey,emoji)=>{
   const rRef=ref(db,`${path}/${msgKey}/reactions/${emoji}/${currentUser.uid}`);
   const snap=await get(rRef); snap.exists()?await remove(rRef):await set(rRef,true);
 };
-window.toggleReaction=window._toggleReaction;
 
 let emojiPickerMode="send";
 window._openReactionPickerMsg=(key)=>{ reactionTargetKey=key; emojiPickerMode="react"; $("emojiPicker").classList.add("show"); };
-window.openReactionPickerMsg=window._openReactionPickerMsg;
 
 $("btnEmoji").onclick=e=>{ e.stopPropagation(); emojiPickerMode="send"; reactionTargetKey=null; $("emojiPicker").classList.toggle("show"); };
 document.querySelectorAll(".emoji-opt").forEach(el=>{
@@ -1558,8 +1541,6 @@ document.addEventListener("click",e=>{ if(!e.target.closest(".emoji-picker")&&!e
 
 // ─── REPORT ───
 window._reportMsg=(key)=>{ reportPendingMsg=key; $("reportModal").classList.add("show"); };
-window.reportMsg=window._reportMsg;
-
 $("btnCancelReport").onclick=()=>{ $("reportModal").classList.remove("show"); reportPendingMsg=null; };
 $("btnConfirmReport").onclick=async()=>{
   if(!reportPendingMsg)return;
@@ -1591,7 +1572,6 @@ async function uploadImage(file){
 function compressImage(file,maxKB){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>{ const img=new Image(); img.onload=()=>{ const canvas=document.createElement("canvas"); let w=img.width,h=img.height,max=800; if(w>max||h>max){if(w>h){h=h/w*max;w=max;}else{w=w/h*max;h=max;}} canvas.width=w;canvas.height=h;canvas.getContext("2d").drawImage(img,0,0,w,h); let q=0.8,b64=canvas.toDataURL("image/jpeg",q); while(b64.length>maxKB*1024&&q>0.1){q-=0.1;b64=canvas.toDataURL("image/jpeg",q);} if(b64.length>maxKB*1024)rej(new Error("Zu groß"));else res(b64); }; img.onerror=rej; img.src=e.target.result; }; r.onerror=rej; r.readAsDataURL(file); }); }
 
 window._viewImg=src=>{ $("viewerImg").src=src; $("imgViewer").classList.add("show"); };
-window.viewImg=window._viewImg;
 
 function showNotif(d,isMention=false){ if(Notification?.permission==="granted"){ const n=new Notification((isMention?"🔔 Erwähnung von ":"💬 ")+(d.name||"?"),{body:d.type==="image"?"📷 Bild":d.text,icon:"https://cdn-icons-png.flaticon.com/512/134/134914.png"}); setTimeout(()=>n.close(),5000); } }
 
@@ -1613,9 +1593,7 @@ window._showProfileByUid=async(uid)=>{
   const snap=await get(ref(db,"users/"+uid)); if(!snap.exists())return;
   renderProfile(uid,snap.val());
 };
-window.showProfileByUid=window._showProfileByUid;
 
-// FIX: showProfile now properly exposed
 window.showProfile=async(e,name)=>{
   const users=await get(ref(db,"users")); if(!users.exists())return;
   const entry=Object.entries(users.val()).find(([,u])=>u.name?.toLowerCase()===name.toLowerCase());
@@ -1671,7 +1649,6 @@ window._toggleBlock=async(uid,name)=>{
   loadBlockedList();
   $("profileModal").classList.remove("show");
 };
-window.toggleBlock=window._toggleBlock;
 
 function loadBlockedList(){
   const el=$("blockedList");
@@ -1726,7 +1703,6 @@ window._startDMWithUid=async(partnerId,partnerName)=>{
   await set(ref(db,`users/${partnerId}/dms/${dmId}`),{partnerId:currentUser.uid,createdAt:Date.now()});
   enterDM(dmId,partnerId,partnerName);
 };
-window.startDMWithUid=window._startDMWithUid;
 
 $("btnNewDM").onclick=()=>{ $("dmSearchInput").value=""; $("dmSearchResults").innerHTML=""; $("newDMModal").classList.add("show"); setTimeout(()=>$("dmSearchInput").focus(),80); };
 $("btnCancelDM").onclick=()=>$("newDMModal").classList.remove("show");
@@ -1819,11 +1795,10 @@ $("pushToggle").onclick=async()=>{ pushEnabled=!pushEnabled; $("pushToggle").cla
 $("closeImgViewer").onclick=()=>$("imgViewer").classList.remove("show");
 $("imgViewer").onclick=e=>{ if(e.target===$("imgViewer"))$("imgViewer").classList.remove("show"); };
 
-// ─── MOBILE UI (FIX: called after auth, not synchronously) ───
+// ─── MOBILE UI ───
 function initMobileUI(){
   const isMobile=()=>window.innerWidth<=680;
 
-  // Show/hide elements based on screen size
   function applyMobileLayout(){
     if(isMobile()){
       $("mobileTopBar").style.display="flex";
@@ -1839,11 +1814,9 @@ function initMobileUI(){
   applyMobileLayout();
   window.addEventListener("resize",applyMobileLayout);
 
-  // FIX: Single, clean mobile menu button handler (no duplicate registrations)
   $("mobileMenuBtn").onclick=()=>{
     const sidebar=document.querySelector(".sidebar");
     if(mobileIsBack){
-      // Was showing as ← back, now act as menu open
       openMobileDrawer();
     } else if(sidebar.classList.contains("open")){
       closeMobileDrawer();
@@ -1854,14 +1827,12 @@ function initMobileUI(){
 
   $("drawerBackdrop").onclick=()=>closeMobileDrawer();
 
-  // Bottom nav
   document.querySelectorAll(".mob-nav-btn").forEach(btn=>{
     btn.onclick=()=>{
       const panel=btn.dataset.mobnav;
       if(panel==="settings"){ $("btnSettings").click(); return; }
       document.querySelectorAll(".mob-nav-btn").forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
-      // Sync sidebar panel
       document.querySelectorAll(".snav-btn").forEach(b=>b.classList.toggle("active",b.dataset.nav===panel));
       document.querySelectorAll(".sidebar-panel").forEach(p=>p.classList.remove("active"));
       const target=$("panel-"+panel);
@@ -1870,7 +1841,6 @@ function initMobileUI(){
     };
   });
 
-  // Mobile search/pinned mirrors
   $("btnSearchToggleMob").onclick=()=>$("btnSearchToggle").click();
   $("btnShowPinnedMob").onclick=()=>$("btnShowPinned").click();
 }
@@ -1887,7 +1857,6 @@ function closeMobileDrawer(){
   document.body.style.overflow="";
 }
 
-// FIX: Separate function to update mobile UI after entering a room
 function updateMobileForRoom(name, emoji){
   if(window.innerWidth>680) return;
   $("mobileTopTitle").textContent=emoji+" "+name;
@@ -1899,7 +1868,6 @@ function updateMobileForRoom(name, emoji){
   document.querySelectorAll(".mob-nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.mobnav===nav));
 }
 
-// When landing panel is shown, reset mobile top bar
 const landingObs=new MutationObserver(()=>{
   if(window.innerWidth<=680&&$("landingPanel").style.display!=="none"){
     $("mobileTopTitle").textContent="ChatPro";
@@ -1937,14 +1905,12 @@ function initThemeTab(){
 }
 $("btnResetTheme").onclick=()=>{ applyTheme(DEFAULT_THEME); syncColorInputs(DEFAULT_THEME); try{localStorage.removeItem("chatTheme");}catch(e){} };
 
-// ═══════════════════════════════════════
-// ADMIN PANEL (FIX: all functions properly defined and wired up)
-// ═══════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// ADMIN PANEL
+// ══════════════════════════════════════════════════════
 function admTs(t){ return t?new Date(t).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"–"; }
 function admEsc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
-function admTrunc(s,n=45){ return String(s||"").length>n?String(s).substring(0,n)+"…":String(s||"–"); }
 
-// FIX: Load users with full UI rendering
 async function admLoadUsers(filter=""){
   const container=$("admUserList");
   container.innerHTML=`<div class="adm-no-data"><div class="loading"></div></div>`;
@@ -1979,7 +1945,6 @@ async function admLoadUsers(filter=""){
   }catch(e){ container.innerHTML=`<div class="adm-no-data">Fehler: ${admEsc(e.message)}</div>`; }
 }
 
-// FIX: Load reports with full rendering
 async function admLoadReports(){
   const container=$("admReportList");
   container.innerHTML=`<div class="adm-no-data"><div class="loading"></div></div>`;
@@ -2004,7 +1969,6 @@ async function admLoadReports(){
   }catch(e){ container.innerHTML=`<div class="adm-no-data">Fehler: ${admEsc(e.message)}</div>`; }
 }
 
-// FIX: Load rooms with full rendering
 async function admLoadRooms(){
   const container=$("admRoomList");
   container.innerHTML=`<div class="adm-no-data"><div class="loading"></div></div>`;
@@ -2029,7 +1993,6 @@ async function admLoadRooms(){
   }catch(e){ container.innerHTML=`<div class="adm-no-data">Fehler: ${admEsc(e.message)}</div>`; }
 }
 
-// FIX: Load DMs with full rendering
 async function admLoadDMs(){
   const container=$("admDMList");
   container.innerHTML=`<div class="adm-no-data"><div class="loading"></div></div>`;
@@ -2055,7 +2018,6 @@ async function admLoadDMs(){
   }catch(e){ container.innerHTML=`<div class="adm-no-data">Fehler: ${admEsc(e.message)}</div>`; }
 }
 
-// FIX: Wire up all admin button handlers
 $("btnAdmLoadUsers").onclick=()=>admLoadUsers($("admSearchUsers").value.trim());
 $("admSearchUsers").addEventListener("input",()=>admLoadUsers($("admSearchUsers").value.trim()));
 $("btnAdmLoadReports").onclick=()=>admLoadReports();
@@ -2063,7 +2025,6 @@ $("btnAdmClearReports").onclick=async()=>{ if(!confirm("Alle Reports löschen?")
 $("btnAdmLoadRooms").onclick=()=>admLoadRooms();
 $("btnAdmLoadDMs").onclick=()=>admLoadDMs();
 
-// FIX: Raw DB handlers
 $("btnAdmRawRead").onclick=async()=>{
   const path=$("admRawPath").value.trim(); if(!path)return;
   try{
@@ -2091,7 +2052,6 @@ $("btnAdmRawDel").onclick=async()=>{
   }catch(e){ $("admRawResult").textContent="Fehler: "+e.message; }
 };
 
-// FIX: Admin action functions exposed as window properties
 window._admRenameUser=async(uid,curName)=>{
   const n=prompt("Neuer Name (3-5 Zeichen):",curName); if(!n||n.trim()===curName)return;
   if(n.trim().length<3||n.trim().length>5){admToast("3-5 Zeichen!","warn");return;}
